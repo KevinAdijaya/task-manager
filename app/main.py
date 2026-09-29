@@ -48,14 +48,20 @@ async def health_check() -> dict[str, str]:
     return {"status": "healthy", "app": settings.APP_NAME}
 
 
-@app.get("/", tags=["root"])
-async def root() -> dict[str, str]:
-    return {
-        "message": f"Welcome to {settings.APP_NAME}",
-        "docs": "/docs",
-        "redoc": "/redoc",
-        "health": "/health",
-    }
+@app.get("/", include_in_schema=False, response_model=None)
+async def root() -> FileResponse | JSONResponse:
+    """Serve the vanilla JS frontend; fall back to a JSON welcome message."""
+    index_file = FRONTEND_DIR / "index.html"
+    if index_file.is_file():
+        return FileResponse(index_file)
+    return JSONResponse(
+        {
+            "message": f"Welcome to {settings.APP_NAME}",
+            "docs": "/docs",
+            "redoc": "/redoc",
+            "health": "/health",
+        }
+    )
 
 
 @app.exception_handler(500)
@@ -67,13 +73,6 @@ async def internal_server_error(request: Request, exc: Exception) -> JSONRespons
 
 
 app.include_router(api_router)
-
-
-@app.get("/", include_in_schema=False)
-async def frontend_index() -> FileResponse:
-    """Serve the vanilla JS frontend (API docs live at /docs)."""
-    return FileResponse(FRONTEND_DIR / "index.html")
-
 
 if FRONTEND_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")

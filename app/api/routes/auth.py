@@ -12,6 +12,7 @@ from app.core.security import (
 )
 from app.models import User
 from app.schemas import (
+    LoginRequest,
     RefreshTokenRequest,
     Token,
     UserCreate,
@@ -58,7 +59,7 @@ async def register(
 
 @router.post("/login", response_model=Token)
 async def login(
-    user_in: UserCreate,
+    user_in: LoginRequest,
     session: AsyncSession = Depends(get_async_session),
 ):
     user_service = UserService(session)

@@ -3,6 +3,13 @@
    Clean, modern CSS with CSS custom properties
    =================================================================== */
 
+/* The `hidden` attribute must always win. Component rules such as
+   `.empty-state { display: flex }` otherwise override the browser
+   default and keep "hidden" elements visible. */
+[hidden] {
+  display: none !important;
+}
+
 :root {
   /* Colors */
   --color-primary: #2563eb;
@@ -304,13 +311,16 @@ label {
   color: var(--color-danger);
 }
 
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="search"],
-input[type="datetime-local"],
-select,
-textarea {
+/* :where() keeps this base style at specificity 0 so utility classes
+   (.search-input, .filter-select, ...) can override it. Without it the
+   attribute selectors win and e.g. the search icon overlaps the text. */
+:where(input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="datetime-local"],
+  select,
+  textarea) {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   font-size: 1rem;
@@ -491,6 +501,12 @@ select {
   letter-spacing: -0.025em;
 }
 
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -666,6 +682,19 @@ select {
   }
 }
 
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.toolbar-right {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -673,12 +702,15 @@ select {
 }
 
 .filter-select {
+  width: auto;
   min-width: 140px;
   padding: var(--space-2) var(--space-3);
   font-size: 0.875rem;
 }
 
 .search-input {
+  width: auto;
+  flex: 1 1 220px;
   min-width: 200px;
   max-width: 300px;
   padding: var(--space-2) var(--space-3);

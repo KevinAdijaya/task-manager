@@ -141,7 +141,7 @@ All task endpoints require `Authorization: Bearer <access_token>` header.
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/auth/register` | POST | Register new user |
-| `/auth/login` | POST | Login, returns access + refresh tokens |
+| `/auth/login` | POST | Login with `email` + `password`, returns access + refresh tokens |
 | `/auth/refresh` | POST | Refresh access token |
 | `/auth/me` | GET | Get current user profile |
 
@@ -173,10 +173,10 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "username": "john", "password": "securepass123"}'
 
-# Login
+# Login (email + password only)
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "username": "john", "password": "securepass123"}'
+  -d '{"email": "user@example.com", "password": "securepass123"}'
 
 # Create task (with token)
 curl -X POST http://localhost:8000/api/v1/tasks/ \

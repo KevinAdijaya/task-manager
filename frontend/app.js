@@ -166,13 +166,28 @@ async function apiRequest(endpoint, options = {}) {
   const data = await response.json().catch(() => ({}));
   
   if (!response.ok) {
-    const error = new Error(data.detail || 'Request failed');
+    const error = new Error(extractErrorMessage(data) || 'Request failed');
     error.status = response.status;
     error.data = data;
     throw error;
   }
   
   return data;
+}
+
+// Turn FastAPI error payloads (string OR 422 array) into a readable message
+function extractErrorMessage(data) {
+  const detail = data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        const field = Array.isArray(item.loc) ? item.loc.slice(1).join('.') : '';
+        return field ? `${field}: ${item.msg}` : item.msg;
+      })
+      .join(' | ');
+  }
+  return '';
 }
 
 // Auth API
@@ -183,10 +198,10 @@ async function registerUser(email, username, password) {
   });
 }
 
-async function loginUser(email, username, password) {
+async function loginUser(email, password) {
   return apiRequest('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, username, password }),
+    body: JSON.stringify({ email, password }),
   });
 }
 
@@ -240,8 +255,8 @@ async function deleteTask(taskId) {
 // Auth Flow
 // ===================================================================
 
-function switchAuthMode() {
-  isLoginMode = !isLoginMode;
+function setAuthMode(login) {
+  isLoginMode = login;
   
   if (isLoginMode) {
     elements.authTitle.textContent = 'Welcome Back';
@@ -261,6 +276,10 @@ function switchAuthMode() {
   elements.authForm.reset();
 }
 
+function switchAuthMode() {
+  setAuthMode(!isLoginMode);
+}
+
 async function handleAuthSubmit(e) {
   e.preventDefault();
   elements.authError.textContent = '';
@@ -270,6 +289,18 @@ async function handleAuthSubmit(e) {
   const username = formData.get('username');
   const password = formData.get('password');
   
+  // The form uses novalidate, so mirror the API rules here for instant feedback
+  const problems = [];
+  if (!email || !String(email).includes('@')) problems.push('Enter a valid email address.');
+  if (!password || String(password).length < 8) problems.push('Password must be at least 8 characters.');
+  if (!isLoginMode && (!username || String(username).length < 3)) {
+    problems.push('Username must be at least 3 characters.');
+  }
+  if (problems.length) {
+    elements.authError.textContent = problems.join(' ');
+    return;
+  }
+  
   const submitBtn = elements.authForm.querySelector('button[type="submit"]');
   const originalText = submitBtn.textContent;
   submitBtn.disabled = true;
@@ -278,11 +309,11 @@ async function handleAuthSubmit(e) {
   try {
     let data;
     if (isLoginMode) {
-      data = await loginUser(email, username, password);
+      data = await loginUser(email, password);
     } else {
       data = await registerUser(email, username, password);
       // Auto-login after registration
-      data = await loginUser(email, username, password);
+      data = await loginUser(email, password);
     }
     
     authToken = data.access_token;
@@ -290,10 +321,11 @@ async function handleAuthSubmit(e) {
     localStorage.setItem('refreshToken', data.refresh_token);
     
     await initApp();
-    closeModal(elements.authModal);
-    showToast(isLoginMode ? 'Welcome back!' : 'Account created successfully!', 'success');
+    if (!elements.app.hidden) {
+      showToast(isLoginMode ? 'Welcome back!' : 'Account created successfully!', 'success');
+    }
   } catch (error) {
-    elements.authError.textContent = error.data?.detail || error.message;
+    elements.authError.textContent = error.message;
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = originalText;
@@ -305,7 +337,7 @@ async function initApp() {
     currentUser = await getCurrentUser();
     updateUserUI();
     elements.app.hidden = false;
-    elements.authModal.hidden = true;
+    closeModal(elements.authModal);
     loadTasks();
     loadStats();
   } catch (error) {
@@ -327,10 +359,9 @@ function logout() {
   localStorage.removeItem('authToken');
   localStorage.removeItem('refreshToken');
   elements.app.hidden = true;
-  elements.authModal.hidden = false;
-  isLoginMode = true;
-  switchAuthMode();
   closeModal(elements.taskModal);
+  setAuthMode(true);
+  openModal(elements.authModal);
 }
 
 // ===================================================================
@@ -342,8 +373,10 @@ function openModal(modal) {
   requestAnimationFrame(() => modal.classList.add('show'));
   document.body.style.overflow = 'hidden';
   
-  // Focus first input
-  const firstInput = modal.querySelector('input, select, textarea');
+  // Focus the first visible input (skip fields hidden by the current mode)
+  const firstInput = Array.from(modal.querySelectorAll('input, select, textarea')).find(
+    (el) => el.offsetParent !== null
+  );
   if (firstInput) firstInput.focus();
 }
 
@@ -351,11 +384,23 @@ function closeModal(modal) {
   modal.classList.remove('show');
   setTimeout(() => {
     modal.hidden = true;
-    document.body.style.overflow = '';
+    // Only unlock page scroll when no other modal is still open
+    if (!document.querySelector('.modal.show')) {
+      document.body.style.overflow = '';
+    }
   }, 200);
 }
 
-function setupModalClose(modal) {
+function setupModalClose(modal, locked = false) {
+  // A locked modal (the login screen) must not be dismissed — otherwise the
+  // user is left staring at an empty page with no way back.
+  if (locked) {
+    modal.querySelectorAll('.modal-close').forEach((btn) => {
+      btn.style.display = 'none';
+    });
+    return;
+  }
+
   modal.querySelectorAll('.modal-close').forEach(btn => {
     btn.addEventListener('click', () => closeModal(modal));
   });
@@ -637,22 +682,29 @@ function setupEventListeners() {
   elements.switchAuth.addEventListener('click', switchAuthMode);
   
   // Modals
-  setupModalClose(elements.authModal);
+  setupModalClose(elements.authModal, true); // login screen: must not be dismissed
   setupModalClose(elements.taskModal);
   
   // User menu
+  const closeUserMenu = () => {
+    document.querySelectorAll('.user-menu.open').forEach((m) => m.classList.remove('open'));
+    elements.userAvatar.setAttribute('aria-expanded', 'false');
+  };
+
   elements.userAvatar.addEventListener('click', () => {
-    elements.userMenu = elements.userMenu || document.querySelector('.user-menu');
-    elements.userMenu.classList.toggle('open');
+    const menu = document.querySelector('.user-menu');
+    const isOpen = menu.classList.toggle('open');
+    elements.userAvatar.setAttribute('aria-expanded', String(isOpen));
   });
-  
+
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.user-menu')) {
-      document.querySelectorAll('.user-menu.open').forEach(m => m.classList.remove('open'));
-    }
+    if (!e.target.closest('.user-menu')) closeUserMenu();
   });
-  
-  elements.logoutBtn.addEventListener('click', logout);
+
+  elements.logoutBtn.addEventListener('click', () => {
+    closeUserMenu();
+    logout();
+  });
   
   // Task actions
   elements.newTaskBtn.addEventListener('click', openNewTask);
@@ -689,7 +741,8 @@ async function init() {
       logout();
     }
   } else {
-    elements.authModal.hidden = false;
+    setAuthMode(true);
+    openModal(elements.authModal);
   }
 }
 

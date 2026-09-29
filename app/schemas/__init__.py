@@ -50,6 +50,13 @@ class TokenPayload(BaseModel):
     type: str
 
 
+class LoginRequest(BaseModel):
+    """Login with email + password (username is not required to sign in)."""
+
+    email: EmailStr
+    password: str
+
+
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 

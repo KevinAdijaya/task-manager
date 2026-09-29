@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/styles.css?v=4">
 </head>
 <body>
   <!-- Auth Modal -->
@@ -22,7 +22,7 @@
         
         <div class="form-group" id="usernameGroup">
           <label for="username">Username</label>
-          <input type="text" id="username" name="username" autocomplete="username" required minlength="3" maxlength="50" pattern="[a-zA-Z0-9_-]+">
+          <input type="text" id="username" name="username" autocomplete="username" required minlength="3" maxlength="50" pattern="[a-zA-Z0-9_\-]+">
         </div>
         
         <div class="form-group" id="emailGroup">
@@ -47,21 +47,23 @@
   <!-- Main App -->
   <div id="app" class="app" hidden>
     <header class="header">
-      <div class="header-left">
-        <h1 class="logo">Task Manager</h1>
-      </div>
-      <div class="header-right">
-        <div class="user-menu">
-          <button class="user-avatar" aria-label="User menu" aria-expanded="false">
-            <span id="userInitial">U</span>
-          </button>
-          <div class="user-dropdown" role="menu">
-            <div class="user-info">
-              <span id="userName"></span>
-              <span id="userEmail"></span>
+      <div class="header-inner">
+        <div class="header-left">
+          <h1 class="logo">Task Manager</h1>
+        </div>
+        <div class="header-right">
+          <div class="user-menu">
+            <button class="user-avatar" aria-label="User menu" aria-expanded="false">
+              <span id="userInitial">U</span>
+            </button>
+            <div class="user-dropdown" role="menu">
+              <div class="user-info">
+                <span id="userName"></span>
+                <span id="userEmail"></span>
+              </div>
+              <hr>
+              <button class="dropdown-item" id="logoutBtn" role="menuitem">Log Out</button>
             </div>
-            <hr>
-            <button class="dropdown-item" id="logoutBtn" role="menuitem">Log Out</button>
           </div>
         </div>
       </div>
@@ -212,6 +214,6 @@
   <!-- Toast Container -->
   <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
-  <script src="/assets/app.js"></script>
+  <script src="/assets/app.js?v=3"></script>
 </body>
 </html>
