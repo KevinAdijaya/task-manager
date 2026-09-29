@@ -2,7 +2,7 @@
 
 A production-ready Task Manager REST API built with **FastAPI**, **PostgreSQL**, **SQLAlchemy 2.0**, and **JWT Authentication**. Includes a clean vanilla JavaScript frontend for demonstration.
 
-[![CI/CD](https://github.com/yourusername/task-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/task-manager/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/KevinAdijaya/task-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/KevinAdijaya/task-manager/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg)](https://www.postgresql.org/)
@@ -74,7 +74,7 @@ task-manager/
 ### 1. Clone & Configure
 
 ```bash
-git clone https://github.com/yourusername/task-manager.git
+git clone https://github.com/KevinAdijaya/task-manager.git
 cd task-manager
 
 # Copy environment template
@@ -240,9 +240,11 @@ docker run -d -p 8000:8000 --env-file .env task-manager:latest
 3. Use `render.yaml` for automatic setup:
    - Web Service (Docker)
    - PostgreSQL Database
-4. Add environment variables in Render dashboard:
-   - `SECRET_KEY` (auto-generated)
-   - `BACKEND_CORS_ORIGINS` (your frontend URL)
+4. `DATABASE_URL` is injected automatically by Render — no manual config needed.
+5. *(Optional)* Enable auto-deploy from CI: create a **Deploy Hook** in
+   Render (Service → Settings → Deploy) and add it as a repository secret
+   named `RENDER_DEPLOY_HOOK_URL`. Until then, the deploy job is skipped
+   gracefully and CI stays green.
 
 ### Fly.io
 ```bash
@@ -264,6 +266,9 @@ railway up
 APP_ENV=production
 DEBUG=false
 SECRET_KEY=your-32-char-min-secret-key
+# Option A: full URL (Render/Railway set this automatically)
+DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/dbname
+# Option B: individual vars (docker-compose & CI)
 POSTGRES_HOST=your-db-host
 POSTGRES_PASSWORD=secure-password
 BACKEND_CORS_ORIGINS=["https://your-frontend.com"]

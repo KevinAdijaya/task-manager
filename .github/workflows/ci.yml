@@ -119,17 +119,25 @@ jobs:
     needs: [lint, test, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     env:
-      HAS_RENDER_SECRET: ${{ secrets.RENDER_API_KEY != '' }}
+      HAS_RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL != '' }}
     steps:
       - name: Deploy to Render
-        if: env.HAS_RENDER_SECRET == 'true'
-        uses: render-oss/render-deploy-action@v1
-        with:
-          service-id: ${{ secrets.RENDER_SERVICE_ID }}
-          api-key: ${{ secrets.RENDER_API_KEY }}
-
-      - name: Skip deploy (secrets not configured)
-        if: env.HAS_RENDER_SECRET != 'true'
+        if: env.HAS_RENDER_HOOK == 'true'
         run: |
-          echo "RENDER_API_KEY not set yet — skipping deploy."
-          echo "Add it in Settings > Secrets and variables > Actions to enable."
+          echo "Triggering Render deploy hook..."
+          HTTP_CODE=$(curl -s -o /tmp/render_response.txt -w "%{http_code}" \
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+            -H "Content-Type: application/json")
+          echo "Response: $HTTP_CODE"
+          cat /tmp/render_response.txt
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::Render deploy hook failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Skip deploy (hook not configured)
+        if: env.HAS_RENDER_HOOK != 'true'
+        run: |
+          echo "RENDER_DEPLOY_HOOK_URL not set yet — skipping deploy."
+          echo "Create a Deploy Hook in Render (Service > Settings > Deploy) and add it"
+          echo "as a repository secret named RENDER_DEPLOY_HOOK_URL to enable auto-deploy."
