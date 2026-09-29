@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Auth Modal -->
+  <div id="authModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="authTitle">Welcome</h2>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="authForm" novalidate>
+        <div id="authError" class="error-message" aria-live="polite"></div>
+        
+        <div class="form-group" id="usernameGroup">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" autocomplete="username" required minlength="3" maxlength="50" pattern="[a-zA-Z0-9_-]+">
+        </div>
+        
+        <div class="form-group" id="emailGroup">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" autocomplete="email" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required minlength="8">
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+      </form>
+      <p class="modal-switch">
+        <span id="switchText">Don't have an account?</span>
+        <button type="button" id="switchAuth" class="btn-link">Sign Up</button>
+      </p>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="app" hidden>
+    <header class="header">
+      <div class="header-left">
+        <h1 class="logo">Task Manager</h1>
+      </div>
+      <div class="header-right">
+        <div class="user-menu">
+          <button class="user-avatar" aria-label="User menu" aria-expanded="false">
+            <span id="userInitial">U</span>
+          </button>
+          <div class="user-dropdown" role="menu">
+            <div class="user-info">
+              <span id="userName"></span>
+              <span id="userEmail"></span>
+            </div>
+            <hr>
+            <button class="dropdown-item" id="logoutBtn" role="menuitem">Log Out</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="container">
+        <!-- Stats Bar -->
+        <section class="stats-bar" aria-label="Task statistics">
+          <div class="stat">
+            <span class="stat-value" id="statTotal">0</span>
+            <span class="stat-label">Total</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="statPending">0</span>
+            <span class="stat-label">Pending</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="statInProgress">0</span>
+            <span class="stat-label">In Progress</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="statDone">0</span>
+            <span class="stat-label">Done</span>
+          </div>
+        </section>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <button class="btn btn-primary" id="newTaskBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              New Task
+            </button>
+          </div>
+          <div class="toolbar-right">
+            <div class="filters">
+              <select id="filterStatus" class="filter-select" aria-label="Filter by status">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+              <select id="filterPriority" class="filter-select" aria-label="Filter by priority">
+                <option value="">All Priority</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <select id="filterCategory" class="filter-select" aria-label="Filter by category">
+                <option value="">All Categories</option>
+              </select>
+            </div>
+            <input type="search" id="searchInput" class="search-input" placeholder="Search tasks..." aria-label="Search tasks">
+          </div>
+        </div>
+
+        <!-- Task List -->
+        <section class="task-list" aria-label="Tasks">
+          <div id="taskList" class="task-cards">
+            <!-- Tasks rendered here -->
+          </div>
+          <div id="emptyState" class="empty-state" hidden>
+            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            </svg>
+            <p>No tasks yet</p>
+            <button class="btn btn-primary" id="firstTaskBtn">Create your first task</button>
+          </div>
+          <div id="loadingState" class="loading-state" hidden>
+            <div class="spinner"></div>
+            <p>Loading tasks...</p>
+          </div>
+        </section>
+
+        <!-- Pagination -->
+        <nav id="pagination" class="pagination" aria-label="Pagination" hidden>
+          <button class="btn btn-secondary" id="prevPage" aria-label="Previous page">Previous</button>
+          <span id="pageInfo" class="page-info"></span>
+          <button class="btn btn-secondary" id="nextPage" aria-label="Next page">Next</button>
+        </nav>
+      </div>
+    </main>
+  </div>
+
+  <!-- Task Modal -->
+  <div id="taskModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h2 id="taskModalTitle">New Task</h2>
+        <button class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <form id="taskForm" novalidate>
+        <input type="hidden" id="taskId" name="id">
+        
+        <div class="form-group">
+          <label for="taskTitle">Title <span class="required">*</span></label>
+          <input type="text" id="taskTitle" name="title" required maxlength="200" autocomplete="off">
+        </div>
+        
+        <div class="form-group">
+          <label for="taskDescription">Description</label>
+          <textarea id="taskDescription" name="description" rows="4" maxlength="5000"></textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taskStatus">Status</label>
+            <select id="taskStatus" name="status" required>
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="taskPriority">Priority</label>
+            <select id="taskPriority" name="priority" required>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="taskCategory">Category</label>
+            <input type="text" id="taskCategory" name="category" maxlength="50" list="categories" autocomplete="off">
+            <datalist id="categories"></datalist>
+          </div>
+          <div class="form-group">
+            <label for="taskDueDate">Due Date</label>
+            <input type="datetime-local" id="taskDueDate" name="due_date">
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancelTaskBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveTaskBtn">Save Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

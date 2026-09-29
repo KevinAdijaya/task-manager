@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: task-manager-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    envVars:
+      - key: APP_NAME
+        value: Task Manager API
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      - key: BACKEND_CORS_ORIGINS
+        value: '["https://your-frontend-domain.com"]'
+    healthCheckPath: /health
+    autoDeploy: true
+
+databases:
+  - name: task-manager-db
+    databaseName: task_manager
+    user: task_manager
+    plan: free
+    region: oregon
