@@ -1,17 +1,16 @@
-from typing import Annotated, Optional
+from typing import Annotated
 from uuid import UUID
-from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
 from sqlalchemy import select
-from jose import JWTError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.database import get_async_session
 from app.core.security import decode_token, verify_token_type
+from app.database import get_async_session
 from app.models import User
 from app.schemas import TokenPayload
-
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
 http_bearer = HTTPBearer(auto_error=False)
@@ -38,10 +37,10 @@ async def get_current_user(
 
     try:
         token_data = TokenPayload(**payload)
-    except Exception:
-        raise credentials_exception
+    except Exception as exc:
+        raise credentials_exception from exc
 
-    user_id = UUID(token_data.sub)
+    user_id: UUID = token_data.sub
     result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
@@ -77,16 +76,6 @@ async def get_current_superuser(
             detail="Not enough permissions",
         )
     return current_user
-
-
-def get_db():
-    """Legacy sync dependency for alembic compatibility"""
-    pass
-
-
-# Optional: Get user from request state (set by middleware if needed)
-def get_user_from_request(request: Request) -> Optional[User]:
-    return getattr(request.state, "user", None)
 
 
 # Dependency types for type hints

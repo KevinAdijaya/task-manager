@@ -2,23 +2,22 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_async_session, get_current_active_user
-from app.schemas import (
-    UserCreate,
-    UserRead,
-    Token,
-    RefreshTokenRequest,
-)
 from app.core.security import (
-    verify_password,
-    get_password_hash,
     create_access_token,
     create_refresh_token,
     decode_token,
+    get_password_hash,
+    verify_password,
     verify_token_type,
 )
-from app.services import UserService
 from app.models import User
-
+from app.schemas import (
+    RefreshTokenRequest,
+    Token,
+    UserCreate,
+    UserRead,
+)
+from app.services import UserService
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -102,6 +101,7 @@ async def refresh_token(
         )
 
     from uuid import UUID
+
     user_id = UUID(payload["sub"])
 
     user_service = UserService(session)

@@ -1,6 +1,7 @@
+from uuid import uuid4
+
 import pytest
 from httpx import AsyncClient
-from uuid import uuid4
 
 
 class TestTasksCreate:
@@ -97,21 +98,27 @@ class TestTasksList:
         assert data["total_pages"] == 2
 
     @pytest.mark.asyncio
-    async def test_list_tasks_filter_status(self, client: AsyncClient, auth_headers, multiple_tasks):
+    async def test_list_tasks_filter_status(
+        self, client: AsyncClient, auth_headers, multiple_tasks
+    ):
         response = await client.get("/api/v1/tasks/?status=done", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert all(task["status"] == "done" for task in data["items"])
 
     @pytest.mark.asyncio
-    async def test_list_tasks_filter_priority(self, client: AsyncClient, auth_headers, multiple_tasks):
+    async def test_list_tasks_filter_priority(
+        self, client: AsyncClient, auth_headers, multiple_tasks
+    ):
         response = await client.get("/api/v1/tasks/?priority=high", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert all(task["priority"] == "high" for task in data["items"])
 
     @pytest.mark.asyncio
-    async def test_list_tasks_filter_category(self, client: AsyncClient, auth_headers, multiple_tasks):
+    async def test_list_tasks_filter_category(
+        self, client: AsyncClient, auth_headers, multiple_tasks
+    ):
         response = await client.get("/api/v1/tasks/?category=Work", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()

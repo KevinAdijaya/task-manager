@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -13,7 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from app.config import settings
 from app.database import Base
-from app.models import User, Task  # noqa: F401
+from app.models import Task, User  # noqa: F401
 
 # this is the Alembic Config object
 config = context.config
@@ -23,7 +23,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Set the SQLAlchemy URL from settings
-config.set_main_option("sqlalchemy.url", str(settings.DATABASE_URL))
+# Escape % for configparser (passwords may contain it)
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 # Add your model's MetaData object here
 target_metadata = Base.metadata
@@ -74,6 +75,7 @@ async def run_async_migrations() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     import asyncio
+
     asyncio.run(run_async_migrations())
 
 

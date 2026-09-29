@@ -1,52 +1,39 @@
-import pytest
 import pytest_asyncio
-from typing import AsyncGenerator
-from uuid import uuid4
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.main import app
+from app.core.security import create_access_token, get_password_hash
 from app.database import Base, get_async_session
-from app.models import User, Task, TaskStatus, Priority
-from app.core.security import get_password_hash, create_access_token
-from app.config import settings
-
+from app.main import app
+from app.models import Priority, Task, TaskStatus, User
 
 # Use in-memory SQLite for tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-test_engine = create_async_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-
-TestingSessionLocal = async_sessionmaker(
-    test_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False,
-)
-
-
-@pytest_asyncio.fixture(scope="session", autouse=True)
-async def init_db():
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
 
 @pytest_asyncio.fixture
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    async with TestingSessionLocal() as session:
+async def db_session():
+    """Fresh in-memory database for each test."""
+    engine = create_async_engine(
+        TEST_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
+    )
+    async with session_factory() as session:
         yield session
 
+    await engine.dispose()
+
 
 @pytest_asyncio.fixture
-async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+async def client(db_session: AsyncSession):
     def override_get_db():
         yield db_session
 
@@ -103,19 +90,22 @@ async def test_task(db_session: AsyncSession, test_user: User) -> Task:
 
 @pytest_asyncio.fixture
 async def multiple_tasks(db_session: AsyncSession, test_user: User) -> list[Task]:
+    statuses = [TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.DONE]
+    priorities = [Priority.LOW, Priority.MEDIUM, Priority.HIGH]
+    categories = ["Work", "Personal"]
+
     tasks = [
         Task(
             title=f"Task {i}",
             description=f"Description {i}",
-            status=TaskStatus.PENDING if i % 3 == 0 else (TaskStatus.IN_PROGRESS if i % 3 == 1 else TaskStatus.DONE),
-            priority=Priority.LOW if i % 3 == 0 else (Priority.MEDIUM if i % 3 == 1 else Priority.HIGH),
-            category="Work" if i % 2 == 0 else "Personal",
+            status=statuses[i % 3],
+            priority=priorities[i % 3],
+            category=categories[i % 2],
             owner_id=test_user.id,
         )
         for i in range(1, 11)
     ]
-    for task in tasks:
-        db_session.add(task)
+    db_session.add_all(tasks)
     await db_session.commit()
     for task in tasks:
         await db_session.refresh(task)

@@ -1,24 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.deps import get_async_session, get_current_active_user
+from app.models import User
 from app.schemas import (
-    TaskCreate,
-    TaskUpdate,
-    TaskRead,
-    TaskFilterParams,
     PaginatedResponse,
+    TaskCreate,
+    TaskFilterParams,
+    TaskRead,
     TaskStats,
+    TaskUpdate,
 )
 from app.services import TaskService
-from app.models import User
-
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
-@router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 async def create_task(
     task_in: TaskCreate,
     session: AsyncSession = Depends(get_async_session),
@@ -29,7 +29,7 @@ async def create_task(
     return task
 
 
-@router.get("", response_model=PaginatedResponse)
+@router.get("/", response_model=PaginatedResponse)
 async def list_tasks(
     status: str | None = Query(None, description="Filter by status"),
     priority: str | None = Query(None, description="Filter by priority"),
@@ -40,7 +40,7 @@ async def list_tasks(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_active_user),
 ):
-    from app.models import TaskStatus, Priority
+    from app.models import Priority, TaskStatus
 
     filters = TaskFilterParams(
         status=TaskStatus(status) if status else None,

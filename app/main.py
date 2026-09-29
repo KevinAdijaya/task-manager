@@ -1,19 +1,25 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from pathlib import Path
 
-from app.config import settings
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
 from app.api import api_router
+from app.config import settings
 from app.database import create_tables
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    # Startup: create tables (use Alembic in production instead)
     await create_tables()
     yield
-    # Shutdown (if needed)
+    # Shutdown
 
 
 app = FastAPI(
@@ -38,12 +44,12 @@ if settings.BACKEND_CORS_ORIGINS:
 
 
 @app.get("/health", tags=["health"])
-async def health_check():
+async def health_check() -> dict[str, str]:
     return {"status": "healthy", "app": settings.APP_NAME}
 
 
 @app.get("/", tags=["root"])
-async def root():
+async def root() -> dict[str, str]:
     return {
         "message": f"Welcome to {settings.APP_NAME}",
         "docs": "/docs",
@@ -52,9 +58,8 @@ async def root():
     }
 
 
-# Global exception handler for better error responses
 @app.exception_handler(500)
-async def internal_server_error(request, exc):
+async def internal_server_error(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},
@@ -62,3 +67,13 @@ async def internal_server_error(request, exc):
 
 
 app.include_router(api_router)
+
+
+@app.get("/", include_in_schema=False)
+async def frontend_index() -> FileResponse:
+    """Serve the vanilla JS frontend (API docs live at /docs)."""
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+if FRONTEND_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")

@@ -1,12 +1,12 @@
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
-from sqlalchemy import select, func, or_
+
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Task, User, TaskStatus, Priority
-from app.schemas import TaskCreate, TaskUpdate, TaskFilterParams, TaskStats
+from app.models import Task, TaskStatus, User
+from app.schemas import TaskCreate, TaskFilterParams, TaskStats, TaskUpdate
 
 
 class TaskService:
@@ -23,7 +23,7 @@ class TaskService:
         await self.session.refresh(task)
         return task
 
-    async def get_by_id(self, task_id: UUID, owner_id: UUID) -> Optional[Task]:
+    async def get_by_id(self, task_id: UUID, owner_id: UUID) -> Task | None:
         result = await self.session.execute(
             select(Task)
             .where(Task.id == task_id, Task.owner_id == owner_id)
@@ -66,7 +66,7 @@ class TaskService:
 
         return list(tasks), total
 
-    async def update(self, task_id: UUID, owner_id: UUID, task_in: TaskUpdate) -> Optional[Task]:
+    async def update(self, task_id: UUID, owner_id: UUID, task_in: TaskUpdate) -> Task | None:
         task = await self.get_by_id(task_id, owner_id)
         if not task:
             return None
@@ -75,7 +75,7 @@ class TaskService:
         for field, value in update_data.items():
             setattr(task, field, value)
 
-        task.updated_at = datetime.now(timezone.utc)
+        task.updated_at = datetime.now(UTC)
         await self.session.commit()
         await self.session.refresh(task)
         return task
@@ -116,7 +116,7 @@ class TaskService:
         overdue_result = await self.session.execute(
             select(func.count(Task.id)).where(
                 Task.owner_id == owner_id,
-                Task.due_date < datetime.now(timezone.utc),
+                Task.due_date < datetime.now(UTC),
                 Task.status != TaskStatus.DONE,
             )
         )
@@ -134,15 +134,15 @@ class UserService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> User | None:
         result = await self.session.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
-    async def get_by_username(self, username: str) -> Optional[User]:
+    async def get_by_username(self, username: str) -> User | None:
         result = await self.session.execute(select(User).where(User.username == username))
         return result.scalar_one_or_none()
 
-    async def get_by_id(self, user_id: UUID) -> Optional[User]:
+    async def get_by_id(self, user_id: UUID) -> User | None:
         result = await self.session.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
 
@@ -157,7 +157,7 @@ class UserService:
         await self.session.refresh(user)
         return user
 
-    async def update(self, user_id: UUID, **kwargs) -> Optional[User]:
+    async def update(self, user_id: UUID, **kwargs) -> User | None:
         user = await self.get_by_id(user_id)
         if not user:
             return None

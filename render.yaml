@@ -6,6 +6,8 @@ services:
     dockerContext: .
     plan: free
     region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: APP_NAME
         value: Task Manager API
@@ -21,10 +23,9 @@ services:
         value: "30"
       - key: REFRESH_TOKEN_EXPIRE_DAYS
         value: "7"
+      # DATABASE_URL is injected automatically by Render from the database below
       - key: BACKEND_CORS_ORIGINS
-        value: '["https://your-frontend-domain.com"]'
-    healthCheckPath: /health
-    autoDeploy: true
+        value: '["https://task-manager-api.onrender.com"]'
 
 databases:
   - name: task-manager-db

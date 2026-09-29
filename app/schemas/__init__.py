@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from app.models import TaskStatus, Priority
+
+from app.models import Priority, TaskStatus
 
 
 # --- User Schemas ---
@@ -16,9 +17,11 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    username: Optional[str] = Field(default=None, min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
-    is_active: Optional[bool] = None
+    email: EmailStr | None = None
+    username: str | None = Field(
+        default=None, min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_-]+$"
+    )
+    is_active: bool | None = None
 
 
 class UserRead(UserBase):
@@ -54,11 +57,11 @@ class RefreshTokenRequest(BaseModel):
 # --- Task Schemas ---
 class TaskBase(BaseModel):
     title: str = Field(min_length=1, max_length=200)
-    description: Optional[str] = Field(default=None, max_length=5000)
+    description: str | None = Field(default=None, max_length=5000)
     status: TaskStatus = TaskStatus.PENDING
     priority: Priority = Priority.MEDIUM
-    category: Optional[str] = Field(default=None, max_length=50)
-    due_date: Optional[datetime] = None
+    category: str | None = Field(default=None, max_length=50)
+    due_date: datetime | None = None
 
 
 class TaskCreate(TaskBase):
@@ -66,12 +69,12 @@ class TaskCreate(TaskBase):
 
 
 class TaskUpdate(BaseModel):
-    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
-    description: Optional[str] = Field(default=None, max_length=5000)
-    status: Optional[TaskStatus] = None
-    priority: Optional[Priority] = None
-    category: Optional[str] = Field(default=None, max_length=50)
-    due_date: Optional[datetime] = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=5000)
+    status: TaskStatus | None = None
+    priority: Priority | None = None
+    category: str | None = Field(default=None, max_length=50)
+    due_date: datetime | None = None
 
 
 class TaskRead(TaskBase):
@@ -89,10 +92,10 @@ class TaskReadWithOwner(TaskRead):
 
 # --- Pagination & Filter Schemas ---
 class TaskFilterParams(BaseModel):
-    status: Optional[TaskStatus] = None
-    priority: Optional[Priority] = None
-    category: Optional[str] = Field(default=None, max_length=50)
-    search: Optional[str] = Field(default=None, max_length=100)
+    status: TaskStatus | None = None
+    priority: Priority | None = None
+    category: str | None = Field(default=None, max_length=50)
+    search: str | None = Field(default=None, max_length=100)
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=20, ge=1, le=100)
 
